@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Expenses.css';
 import AddExpenseModal from '../components/AddExpenseModal';
 
@@ -12,30 +12,41 @@ const Expenses = () => {
     // Each element is an object with id, date, description, category, amount.
     // This is the main data structure for the Expenses page.
     // ══════════════════════════════════════════════════════════
-    const [expenses, setExpenses] = useState([
-        { id: 1, date: '2/28/2026', description: 'Grocery Store', category: 'Food & Dining', amount: 26.13 },
-        { id: 2, date: '2/19/2026', description: 'Dinner Out', category: 'Food & Dining', amount: 13.62 },
-        { id: 3, date: '2/19/2026', description: 'Clothing Store', category: 'Shopping', amount: 83.45 },
-        { id: 4, date: '2/18/2026', description: 'Bus Pass', category: 'Transport', amount: 51.67 },
-        { id: 5, date: '2/18/2026', description: 'Books', category: 'Entertainment', amount: 31.83 },
-        { id: 6, date: '2/16/2026', description: 'Streaming Service', category: 'Entertainment', amount: 39.80 },
-        { id: 7, date: '2/15/2026', description: 'Electric Bill', category: 'Utilities', amount: 76.12 },
-    ]);
+    const [expenses, setExpenses] = useState([]);
+
+    useEffect(() => {
+        const fetchExpenses = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/expenses');
+                const data = await response.json();
+                setExpenses(data);
+            } catch (error) {
+                console.error('Error fetching expenses:', error);
+            }
+        };
+        fetchExpenses();
+    }, []);
 
     // ══════════════════════════════════════════════════════════
     // ARRAY METHOD: Adding to Array (Spread Operator)
     // Creates a new array with the new expense at the front.
     // [newEntry, ...prev] means: put newEntry first, then all previous items.
     // ══════════════════════════════════════════════════════════
-    const handleAddExpense = (newExpense) => {
-        const newEntry = {
-            id: Date.now(),
-            ...newExpense,
-            // Format date for display in table
-            date: new Date(newExpense.date).toLocaleDateString()
-        };
-        setExpenses(prev => [newEntry, ...prev]);
-        setIsModalOpen(false);
+    const handleAddExpense = async (newExpense) => {
+        try {
+            const response = await fetch('http://localhost:5000/api/expenses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newExpense),
+            });
+            const data = await response.json();
+            setExpenses(prev => [data, ...prev]);
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Error adding expense:', error);
+        }
     };
 
     // ══════════════════════════════════════════════════════════
@@ -43,8 +54,15 @@ const Expenses = () => {
     // Creates a new array WITHOUT the deleted item.
     // Keeps only items whose id does NOT match the one being deleted.
     // ══════════════════════════════════════════════════════════
-    const handleDeleteExpense = (id) => {
-        setExpenses(prev => prev.filter(exp => exp.id !== id));
+    const handleDeleteExpense = async (id) => {
+        try {
+            await fetch(`http://localhost:5000/api/expenses/${id}`, {
+                method: 'DELETE',
+            });
+            setExpenses(prev => prev.filter(exp => exp._id !== id));
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+        }
     };
 
     // ══════════════════════════════════════════════════════════
@@ -136,13 +154,13 @@ const Expenses = () => {
                         </thead>
                         <tbody>
                             {filteredExpenses.map((exp) => (
-                                <tr key={exp.id}>
-                                    <td>{exp.date}</td>
+                                <tr key={exp._id}>
+                                    <td>{new Date(exp.date).toLocaleDateString()}</td>
                                     <td className="description">{exp.description}</td>
                                     <td><span className="category-pill">{exp.category}</span></td>
                                     <td className="amount">₱{exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                     <td className="actions">
-                                        <button className="delete-btn" onClick={() => handleDeleteExpense(exp.id)}>
+                                        <button className="delete-btn" onClick={() => handleDeleteExpense(exp._id)}>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
                                         </button>
                                     </td>

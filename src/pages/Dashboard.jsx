@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './Dashboard.css';
 import AddExpenseModal from '../components/AddExpenseModal';
 
@@ -8,11 +8,20 @@ const Dashboard = () => {
     // Each element is an object with id, date, description, category, amount.
     // We use useState so React re-renders when the array changes.
     // ══════════════════════════════════════════════════════════
-    const [expenses, setExpenses] = useState([
-        { id: 1, date: '2026-02-20', description: 'Grocery Store', category: 'Food & Dining', amount: 26.13 },
-        { id: 2, date: '2026-02-19', description: 'Dinner Out', category: 'Food & Dining', amount: 13.62 },
-        { id: 3, date: '2026-02-19', description: 'Clothing Store', category: 'Shopping', amount: 83.45 },
-    ]);
+    const [expenses, setExpenses] = useState([]);
+
+    useEffect(() => {
+        const fetchExpenses = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/expenses');
+                const data = await response.json();
+                setExpenses(data);
+            } catch (error) {
+                console.error('Error fetching expenses:', error);
+            }
+        };
+        fetchExpenses();
+    }, []);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -21,13 +30,21 @@ const Dashboard = () => {
     // When a new expense is added, we create a new array with
     // the new item at the front using the spread operator [...prev]
     // ══════════════════════════════════════════════════════════
-    const handleAddExpense = (newExpense) => {
-        const newEntry = {
-            id: Date.now(),
-            ...newExpense
-        };
-        setExpenses(prev => [newEntry, ...prev]);
-        setIsModalOpen(false);
+    const handleAddExpense = async (newExpense) => {
+        try {
+            const response = await fetch('http://localhost:5000/api/expenses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newExpense),
+            });
+            const data = await response.json();
+            setExpenses(prev => [data, ...prev]);
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Error adding expense:', error);
+        }
     };
 
     // ══════════════════════════════════════════════════════════
@@ -323,7 +340,7 @@ const Dashboard = () => {
                             </thead>
                             <tbody>
                                 {expenses.map((expense) => (
-                                    <tr key={expense.id}>
+                                    <tr key={expense._id}>
                                         <td>{new Date(expense.date).toLocaleDateString()}</td>
                                         <td>{expense.description}</td>
                                         <td><span className="category-pill">{expense.category}</span></td>
