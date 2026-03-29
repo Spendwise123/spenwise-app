@@ -18,6 +18,18 @@ const userSchema = mongoose.Schema({
     role: {
         type: String,
         default: 'user',
+    },
+    phone: {
+        type: String,
+        default: '',
+    },
+    profileImage: {
+        type: String,
+        default: '',
+    },
+    balance: {
+        type: Number,
+        default: 0,
     }
 }, {
     timestamps: true
