@@ -29,6 +29,10 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'transactions.apps.TransactionsConfig',
     'budgets.apps.BudgetsConfig',
+    'feedback.apps.FeedbackConfig',
+    'investments.apps.InvestmentsConfig',
+    'loans.apps.LoansConfig',
+    'savings.apps.SavingsConfig',
 ]
 
 MIDDLEWARE = [
@@ -63,7 +67,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database configuration
-# Using SQLite for testing because MongoDB (Djongo) is currently unreachable
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
