@@ -71,7 +71,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database configuration
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        env='DATABASE_URL',
+        default=os.getenv('POSTGRES_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
         conn_health_checks=True,
     )
