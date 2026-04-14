@@ -51,6 +51,7 @@ const Auth = () => {
 
   // Determine initial mode from route
   const [isSignUp, setIsSignUp] = useState(location.pathname === '/signup');
+  const [authLoading, setAuthLoading] = useState(false);
   const [animating, setAnimating] = useState(false);
 
   // Form states
@@ -63,7 +64,6 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupError, setSignupError] = useState('');
-  const [signupLoading, setSignupLoading] = useState(false);
   const [successMode, setSuccessMode] = useState(false);
 
   // Visibility states
@@ -85,10 +85,21 @@ const Auth = () => {
 
   const signupStrength = getPasswordStrength(signupPassword);
 
-  // Keep URL in sync
+  // Sync initial state and handle browse navigation (Back/Forward)
   useEffect(() => {
-    navigate(isSignUp ? '/signup' : '/login', { replace: true });
-  }, [isSignUp]);
+    const isSignupPath = location.pathname === '/signup';
+    if (isSignUp !== isSignupPath) {
+      setIsSignUp(isSignupPath);
+    }
+  }, [location.pathname]);
+
+  // Keep URL in sync on explicit toggle
+  useEffect(() => {
+    const path = isSignUp ? '/signup' : '/login';
+    if (location.pathname !== path) {
+      navigate(path, { replace: true });
+    }
+  }, [isSignUp, navigate, location.pathname]);
 
   const switchMode = () => {
     if (animating) return;
@@ -104,33 +115,58 @@ const Auth = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
+    
+    if (!loginEmail || !validateEmail(loginEmail)) {
+      setLoginError('Please enter a valid email address.');
+      return;
+    }
+    if (!loginPassword) {
+      setLoginError('Please enter your password.');
+      return;
+    }
+
+    setAuthLoading(true);
     try {
       await login(loginEmail, loginPassword);
       setSuccessMode(true);
       setTimeout(() => navigate('/dashboard'), 1000);
     } catch (err) {
       setLoginError(err.message || 'Failed to sign in');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (signupPassword !== confirmPassword) {
-      return setSignupError('Passwords do not match');
+    setSignupError('');
+
+    if (!name || name.length < 2) {
+      setSignupError('Please enter your full name.');
+      return;
     }
+    if (!signupEmail || !validateEmail(signupEmail)) {
+      setSignupError('Please enter a valid email address.');
+      return;
+    }
+    if (signupStrength < 2) {
+      setSignupError('Password is too weak.');
+      return;
+    }
+    if (signupPassword !== confirmPassword) {
+      setSignupError('Passwords do not match.');
+      return;
+    }
+
+    setAuthLoading(true);
     try {
-      setSignupError('');
-      setSignupLoading(true);
-      const parts = name.trim().split(' ');
-      const firstName = parts[0];
-      const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
-      await signup(signupEmail, signupPassword, firstName, lastName);
+      await signup(signupEmail, signupPassword, name);
       setSuccessMode(true);
       setTimeout(() => navigate('/dashboard'), 1000);
     } catch (err) {
       setSignupError(err.message || 'Failed to create account');
     } finally {
-      setSignupLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -234,7 +270,7 @@ const Auth = () => {
             <div className={`auth-form-track ${isSignUp ? 'auth-form-track--signup' : ''}`}>
 
               {/* ── Sign In form ── */}
-              <div className="auth-form-slot">
+              <div className={`auth-form-slot ${!isSignUp ? 'active' : ''}`}>
                 <div className="auth-form-header">
                   <h1 className="auth-form-title">Welcome back</h1>
                   <p className="auth-form-sub">Sign in to your SpendWise account</p>
@@ -248,7 +284,7 @@ const Auth = () => {
 
                 <form onSubmit={handleLogin} className="auth-form" noValidate>
                   <div className={`auth-field ${loginEmail && (validateEmail(loginEmail) ? 'auth-field--valid' : 'auth-field--invalid')}`}>
-                    <label className="auth-field__label">Email address</label>
+                    <label htmlFor="login-email" className="auth-field__label">Email address</label>
                     <div className="auth-field__wrap">
                       <span className="auth-field__icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -268,8 +304,8 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className={`auth-field ${loginPassword && 'auth-field--valid'}`}>
-                    <label className="auth-field__label">Password</label>
+                  <div className="auth-field">
+                    <label htmlFor="login-password" className="auth-field__label">Password</label>
                     <div className="auth-field__wrap">
                       <span className="auth-field__icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -290,6 +326,8 @@ const Auth = () => {
                         type="button"
                         className="auth-field__toggle"
                         onClick={() => setShowLoginPass(!showLoginPass)}
+                        aria-label={showLoginPass ? "Hide password" : "Show password"}
+                        aria-pressed={showLoginPass}
                       >
                         {showLoginPass ? (
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -300,10 +338,10 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className={`auth-submit ${successMode ? 'auth-submit--success' : ''}`} id="login-submit" disabled={loading || successMode}>
+                  <button type="submit" className={`auth-submit ${successMode ? 'auth-submit--success' : ''}`} id="login-submit" disabled={authLoading || successMode}>
                     {successMode ? (
                       <svg className="success-check" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    ) : loading ? (
+                    ) : authLoading ? (
                       <><span className="auth-spinner" /> Signing in…</>
                     ) : (
                       <><span>Sign In</span> <span className="auth-submit__arrow">→</span></>
@@ -318,7 +356,7 @@ const Auth = () => {
               </div>
 
               {/* ── Sign Up form ── */}
-              <div className="auth-form-slot">
+              <div className={`auth-form-slot ${isSignUp ? 'active' : ''}`}>
                 <div className="auth-form-header">
                   <h1 className="auth-form-title">Create account</h1>
                   <p className="auth-form-sub">Start your smart spending journey today</p>
@@ -332,7 +370,7 @@ const Auth = () => {
 
                 <form onSubmit={handleSignup} className="auth-form" noValidate>
                   <div className={`auth-field ${name && (name.length > 2 ? 'auth-field--valid' : 'auth-field--invalid')}`}>
-                    <label className="auth-field__label">Full name</label>
+                    <label htmlFor="signup-name" className="auth-field__label">Full name</label>
                     <div className="auth-field__wrap">
                       <span className="auth-field__icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -353,7 +391,7 @@ const Auth = () => {
                   </div>
 
                   <div className={`auth-field ${signupEmail && (validateEmail(signupEmail) ? 'auth-field--valid' : 'auth-field--invalid')}`}>
-                    <label className="auth-field__label">Email address</label>
+                    <label htmlFor="signup-email" className="auth-field__label">Email address</label>
                     <div className="auth-field__wrap">
                       <span className="auth-field__icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -375,7 +413,7 @@ const Auth = () => {
 
                   <div className="auth-fields-row">
                     <div className={`auth-field ${signupPassword && (signupStrength >= 3 ? 'auth-field--valid' : 'auth-field--invalid')}`}>
-                      <label className="auth-field__label">Password</label>
+                      <label htmlFor="signup-password" className="auth-field__label">Password</label>
                       <div className="auth-field__wrap">
                         <span className="auth-field__icon">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -396,6 +434,8 @@ const Auth = () => {
                           type="button"
                           className="auth-field__toggle"
                           onClick={() => setShowSignupPass(!showSignupPass)}
+                          aria-label={showSignupPass ? "Hide password" : "Show password"}
+                          aria-pressed={showSignupPass}
                         >
                           {showSignupPass ? (
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -419,7 +459,7 @@ const Auth = () => {
                     </div>
 
                     <div className={`auth-field ${confirmPassword && (confirmPassword === signupPassword ? 'auth-field--valid' : 'auth-field--invalid')}`}>
-                      <label className="auth-field__label">Confirm</label>
+                      <label htmlFor="signup-confirm" className="auth-field__label">Confirm</label>
                       <div className="auth-field__wrap">
                         <span className="auth-field__icon">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -439,6 +479,8 @@ const Auth = () => {
                           type="button"
                           className="auth-field__toggle"
                           onClick={() => setShowConfirmPass(!showConfirmPass)}
+                          aria-label={showConfirmPass ? "Hide password" : "Show password"}
+                          aria-pressed={showConfirmPass}
                         >
                           {showConfirmPass ? (
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -450,10 +492,10 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className={`auth-submit ${successMode ? 'auth-submit--success' : ''}`} id="signup-submit" disabled={signupLoading || successMode}>
+                  <button type="submit" className={`auth-submit ${successMode ? 'auth-submit--success' : ''}`} id="signup-submit" disabled={authLoading || successMode}>
                     {successMode ? (
                       <svg className="success-check" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    ) : signupLoading ? (
+                    ) : authLoading ? (
                       <><span className="auth-spinner" /> Creating account…</>
                     ) : (
                       <><span>Create Account</span> <span className="auth-submit__arrow">→</span></>

@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "env": {
+    "PYTHONPATH": "backend"
+  },
+  "build": {
+    "env": {
+      "PYTHONPATH": "backend"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
+  "functions": {
+    "api/index.py": {
+      "runtime": "vercel-python@0.0.0"
+    }
+  }
+}
