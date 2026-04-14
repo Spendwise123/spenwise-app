@@ -4,8 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Predictions from './pages/Predictions';
@@ -22,8 +21,8 @@ function App() {
             <Route path="/" element={<Landing />} />
 
             {/* Auth routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/signup" element={<Auth />} />
 
             {/* Protected routes wrapped in MainLayout */}
             <Route path="/dashboard" element={
