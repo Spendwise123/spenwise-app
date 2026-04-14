@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './Login.css';
+import './Auth.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -23,19 +23,29 @@ const Login = () => {
   };
 
   return (
-    <div className="container">
-      <div className="form">
-        <h1 className="title">SpendWise</h1>
-        <p className="subtitle">AI-driven personal finance insights</p>
+    <div className="auth-container">
+      <div className="auth-bg-blob blob-1"></div>
+      <div className="auth-bg-blob blob-2"></div>
+      
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <h1 className="auth-title">Welcome Back</h1>
+          <p className="auth-subtitle">AI-driven personal finance insights</p>
+        </div>
 
-        {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+        {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label className="label">Email</label>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-field">
+            <label className="auth-label">Email Address</label>
             <input
               type="email"
-              className="input"
+              className="auth-input"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -43,33 +53,35 @@ const Login = () => {
             />
           </div>
 
-          <div className="field">
-            <label className="label">Password</label>
+          <div className="auth-field">
+            <label className="auth-label">Password</label>
             <input
               type="password"
-              className="input"
-              placeholder="Enter your password"
+              className="auth-input"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <div className="demo-section">
-            <p className="demo-title">Demo accounts:</p>
-            <p className="demo-line">Admin: admin@spendwise.com</p>
-            <p className="demo-line">User: sarah@example.com</p>
-            <p className="demo-note">Password: demo123</p>
+          <div className="auth-demo">
+            <p className="auth-demo-title">Demo accounts</p>
+            <p className="auth-demo-text">
+              <strong>Admin:</strong> admin@spendwise.com<br/>
+              <strong>User:</strong> sarah@example.com<br/>
+              <strong>Pass:</strong> demo123
+            </p>
           </div>
 
-          <button type="submit" className="button" disabled={loading}>
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
-
-          <p className="footer">
-            Don't have an account? <Link to="/signup" className="link">Sign up</Link>
-          </p>
         </form>
+
+        <div className="auth-footer">
+          Don't have an account? <Link to="/signup" className="auth-link">Sign up</Link>
+        </div>
       </div>
     </div>
   );

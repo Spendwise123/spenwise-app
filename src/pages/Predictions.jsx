@@ -1,5 +1,6 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './Predictions.css';
+import { getSummary } from '../data/mockApi';
 
 // Simple Linear Regression simulation
 const calculatePrediction = (actualData) => {
@@ -8,7 +9,7 @@ const calculatePrediction = (actualData) => {
 
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     actualData.forEach((d, i) => {
-        const x = i + 1;
+        const x = d.day;
         const y = d.val;
         sumX += x;
         sumY += y;
@@ -22,32 +23,42 @@ const calculatePrediction = (actualData) => {
     return { slope, intercept };
 };
 
-// ── Simulated Actual Data (First 12 days) ──
-const actualBase = [
-    120, 240, 310, 480, 590, 720, 850, 980, 1100, 1250, 1380, 1550
-];
-
 const Predictions = () => {
+    const [summary, setSummary] = useState({ trajectory: [] });
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const data = await getSummary();
+                setSummary(data);
+            } catch (error) {
+                console.error('Error fetching prediction data:', error);
+            }
+        };
+        fetchData();
+    }, []);
 
     const { predictionData, stats } = useMemo(() => {
-        const actuals = actualBase.map((val, i) => ({ day: i + 1, val }));
+        const actuals = summary.trajectory.map(item => ({ day: item.day, val: item.actual }));
         const { slope, intercept } = calculatePrediction(actuals);
 
         const data = [];
         for (let i = 1; i <= 30; i++) {
             const pred = Math.max(0, slope * i + intercept);
+            const actualItem = summary.trajectory.find(d => d.day === i);
             data.push({
                 day: i,
                 predicted: pred,
-                actual: i <= actualBase.length ? actualBase[i - 1] : null
+                actual: actualItem ? actualItem.actual : null
             });
         }
 
         const predictedTotal = data[29].predicted;
+        const lastActual = actuals.length > 0 ? actuals[actuals.length - 1].val : 0;
         const budget = 2000;
         const overBudget = Math.max(0, predictedTotal - budget);
-        const daysRemaining = 30 - actualBase.length;
-        const dailyLimit = overBudget > 0 ? 0 : (budget - actualBase[actualBase.length - 1]) / daysRemaining;
+        const daysRemaining = 30 - actuals.length;
+        const dailyLimit = overBudget > 0 ? 0 : (budget - lastActual) / daysRemaining;
 
         return {
             predictionData: data,
@@ -55,11 +66,11 @@ const Predictions = () => {
                 predictedTotal,
                 overBudget,
                 dailyLimit,
-                daysRemaining: 30 - actualBase.length,
+                daysRemaining,
                 confidence: 98.4
             }
         };
-    }, []);
+    }, [summary.trajectory]);
 
     const [hoveredPoint, setHoveredPoint] = useState(null);
     const chartRef = useRef(null);

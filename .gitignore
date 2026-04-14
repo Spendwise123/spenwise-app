@@ -1,3 +1,12 @@
+# General / OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+Thumbs.db
+*.swp
+*.swo
+
 # Logs
 logs
 *.log
@@ -7,18 +16,90 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Dependencies
+node_modules/
+/jspm_packages/
+.npm
+.eslintcache
+.stylelintcache
+.node_repl_history
+*.tsbuildinfo
 
-# Editor directories and files
+# Build / Distribution
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.serverless/
+.fusebox/
+.dynamodb/
+
+# Editor / IDE
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/launch.json
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.project
+.classpath
+.settings/
+
+# Environment / Secret Files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.pem
+*.key
+
+# PHP/Composer (if any)
+vendor/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.toast
+.lucid
+.cache
+.pytest_cache
+.mypy_cache
+.ruff_cache
+/site-packages/
+/bin/
+/lib/
+/share/
+/Include/
+/Scripts/
+db.sqlite3
+db.sqlite3-journal
+
+# Expo / React Native
+.expo/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+/ios
+/android
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+
+# Legacy Cleanup
+server_legacy/

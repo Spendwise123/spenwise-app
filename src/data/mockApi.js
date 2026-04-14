@@ -1,36 +1,81 @@
 // src/data/mockApi.js
 
-// In-memory mock database for development
-let mockExpenses = [
-    { _id: '1', date: new Date().toISOString(), description: 'Gas Station', category: 'Transport', amount: 45.50 },
-    { _id: '2', date: new Date(Date.now() - 86400000 * 2).toISOString(), description: 'Groceries', category: 'Food & Dining', amount: 120.00 },
-    { _id: '3', date: new Date(Date.now() - 86400000 * 5).toISOString(), description: 'Electric Bill', category: 'Utilities', amount: 75.00 },
-    { _id: '4', date: new Date(Date.now() - 86400000 * 7).toISOString(), description: 'Coffee', category: 'Food & Dining', amount: 5.50 },
-    { _id: '5', date: new Date(Date.now() - 86400000 * 10).toISOString(), description: 'Clothing', category: 'Shopping', amount: 65.00 }
-];
+const API_BASE_URL = '/api/expenses';
+
+const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
+
+/**
+ * Standardizes API responses to ensure both 'id' and '_id' are available.
+ * This bridges the gap between Django (id) and legacy Express (_id).
+ */
+const mapResponse = (data) => {
+    if (Array.isArray(data)) {
+        return data.map(item => ({ ...item, _id: item.id || item._id, id: item.id || item._id }));
+    }
+    return { ...data, _id: data.id || data._id, id: data.id || data._id };
+};
 
 export const getExpenses = async () => {
-    // Simulate network delay
-    return new Promise(resolve => {
-        setTimeout(() => resolve([...mockExpenses]), 200);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch expenses');
+        const data = await response.json();
+        return mapResponse(data);
+    } catch (error) {
+        console.error('API Error (getExpenses):', error);
+        throw error;
+    }
 };
 
 export const addExpense = async (expense) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const newExpense = { ...expense, _id: Date.now().toString() };
-            mockExpenses = [newExpense, ...mockExpenses];
-            resolve(newExpense);
-        }, 300);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                ...expense,
+                type: 'expense',
+                date: expense.date || new Date().toISOString().split('T')[0]
+            })
+        });
+        if (!response.ok) throw new Error('Failed to add expense');
+        const data = await response.json();
+        return mapResponse(data);
+    } catch (error) {
+        console.error('API Error (addExpense):', error);
+        throw error;
+    }
 };
 
 export const deleteExpense = async (id) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            mockExpenses = mockExpenses.filter(e => e._id !== id);
-            resolve({ success: true });
-        }, 200);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/${id}/`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to delete expense');
+        return { success: true };
+    } catch (error) {
+        console.error('API Error (deleteExpense):', error);
+        throw error;
+    }
+};
+
+export const getSummary = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/summary/`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch summary');
+        const data = await response.json();
+        return data; // Summary structure is custom, no need for mapResponse
+    } catch (error) {
+        console.error('API Error (getSummary):', error);
+        throw error;
+    }
 };

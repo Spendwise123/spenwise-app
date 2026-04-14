@@ -3,37 +3,32 @@ import './Expenses.css';
 import AddExpenseModal from '../components/AddExpenseModal';
 import { useAuth } from '../context/AuthContext';
 import { getExpenses, addExpense, deleteExpense } from '../data/mockApi';
+import { CATEGORIES } from '../constants/categories';
 
 const Expenses = () => {
     const { getToken } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Categories');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // ══════════════════════════════════════════════════════════
-    // ARRAY: Expenses Array (Array of Objects)
-    // Each element is an object with id, date, description, category, amount.
-    // This is the main data structure for the Expenses page.
-    // ══════════════════════════════════════════════════════════
     const [expenses, setExpenses] = useState([]);
 
     useEffect(() => {
         const fetchExpenses = async () => {
+            setIsLoading(true);
             try {
                 const data = await getExpenses();
                 setExpenses(data);
             } catch (error) {
                 console.error('Error fetching expenses:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchExpenses();
     }, []);
 
-    // ══════════════════════════════════════════════════════════
-    // ARRAY METHOD: Adding to Array (Spread Operator)
-    // Creates a new array with the new expense at the front.
-    // [newEntry, ...prev] means: put newEntry first, then all previous items.
-    // ══════════════════════════════════════════════════════════
     const handleAddExpense = async (newExpense) => {
         try {
             const data = await addExpense(newExpense);
@@ -41,40 +36,36 @@ const Expenses = () => {
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error adding expense:', error);
+            alert('Failed to add expense.');
         }
     };
 
-    // ══════════════════════════════════════════════════════════
-    // ARRAY METHOD: .filter() — Removing from Array
-    // Creates a new array WITHOUT the deleted item.
-    // Keeps only items whose id does NOT match the one being deleted.
-    // ══════════════════════════════════════════════════════════
     const handleDeleteExpense = async (id) => {
         try {
             await deleteExpense(id);
-            setExpenses(prev => prev.filter(exp => exp._id !== id));
+            setExpenses(prev => prev.filter(exp => (exp.id || exp._id) !== id));
         } catch (error) {
             console.error('Error deleting expense:', error);
+            alert('Failed to delete expense.');
         }
     };
 
-    // ══════════════════════════════════════════════════════════
-    // ARRAY METHOD: .filter() — Searching & Filtering
-    // Creates a new array that only includes expenses matching
-    // the search term AND the selected category.
-    // ══════════════════════════════════════════════════════════
     const filteredExpenses = expenses.filter(exp => {
         const matchesSearch = exp.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = categoryFilter === 'All Categories' || exp.category === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 
-    // ══════════════════════════════════════════════════════════
-    // ARRAY METHOD: .reduce() — Computing Total
-    // Loops through every item and adds up the 'amount' field.
-    // Result is a single number: the total amount spent.
-    // ══════════════════════════════════════════════════════════
     const totalSpent = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    if (isLoading) {
+        return (
+            <div className="expenses-container loading-wrapper">
+                <div className="spinner"></div>
+                <p>Curating your transaction history...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="expenses-container">
@@ -125,11 +116,9 @@ const Expenses = () => {
                             onChange={(e) => setCategoryFilter(e.target.value)}
                         >
                             <option>All Categories</option>
-                            <option>Food & Dining</option>
-                            <option>Shopping</option>
-                            <option>Transport</option>
-                            <option>Entertainment</option>
-                            <option>Utilities</option>
+                            {CATEGORIES.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -146,19 +135,27 @@ const Expenses = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredExpenses.map((exp) => (
-                                <tr key={exp._id}>
-                                    <td>{new Date(exp.date).toLocaleDateString()}</td>
-                                    <td className="description">{exp.description}</td>
-                                    <td><span className="category-pill">{exp.category}</span></td>
-                                    <td className="amount">₱{exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                    <td className="actions">
-                                        <button className="delete-btn" onClick={() => handleDeleteExpense(exp._id)}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                                        </button>
+                            {filteredExpenses.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="empty-state">
+                                        <p>No transactions found matching your criteria.</p>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredExpenses.map((exp) => (
+                                    <tr key={exp.id || exp._id}>
+                                        <td>{new Date(exp.date).toLocaleDateString()}</td>
+                                        <td className="description">{exp.description}</td>
+                                        <td><span className="category-pill">{exp.category}</span></td>
+                                        <td className="amount">₱{exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <td className="actions">
+                                            <button className="delete-btn" onClick={() => handleDeleteExpense(exp.id || exp._id)}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

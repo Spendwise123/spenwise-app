@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -17,17 +18,14 @@ function App() {
       <AuthProvider>
         <div className="App">
           <Routes>
-            {/* Public routes - no sidebar, no login required */}
+            {/* Public landing page */}
+            <Route path="/" element={<Landing />} />
+
+            {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected routes wrapped in MainLayout */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout><Dashboard /></MainLayout>
-              </ProtectedRoute>
-            } />
-
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <MainLayout><Dashboard /></MainLayout>
@@ -52,8 +50,8 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Catch all - redirect to login */}
-            <Route path="*" element={<Navigate to="/login" />} />
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
       </AuthProvider>
@@ -61,4 +59,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;

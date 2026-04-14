@@ -5,10 +5,15 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'date_joined')
+        fields = ('id', 'email', 'name', 'first_name', 'last_name', 'date_joined')
         read_only_fields = ('id', 'email', 'date_joined')
+
+    def get_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.email.split('@')[0]
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -31,8 +36,18 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['email'] = user.email
-        return token
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        # Match Express response format: id, name, email, role, token
+        data['id'] = self.user.id
+        data['email'] = self.user.email
+        data['name'] = f"{self.user.first_name} {self.user.last_name}".strip() or self.user.email.split('@')[0]
+        data['role'] = 'admin' if self.user.is_staff else 'user'
+        data['token'] = data.pop('access')
+        
+        # We don't need 'refresh' for the current frontend if it expects the Express format
+        if 'refresh' in data:
+            del data['refresh']
+            
+        return data

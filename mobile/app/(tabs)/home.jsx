@@ -29,12 +29,17 @@ export default function HomeScreen() {
                 authFetch('/budgets/summary'),
             ]);
 
-            const inv = invRes.ok ? await invRes.json() : { totalValue: 0, totalProfitLoss: 0 };
+            const inv = invRes.ok ? await invRes.json() : { totalValue: 0, totalProfitLoss: 0, count: 0 };
             const sav = savRes.ok ? await savRes.json() : { totalSaved: 0, activeGoals: 0 };
             const loan = loanRes.ok ? await loanRes.json() : { totalRemaining: 0, activeLoans: 0 };
             const bud = budRes.ok ? await budRes.json() : { totalSpent: 0, totalLimit: 0 };
 
-            setSummary({ investments: inv, savings: sav, loans: loan, budgets: bud });
+            setSummary({ 
+                investments: inv, 
+                savings: sav, 
+                loans: loan, 
+                budgets: bud 
+            });
         } catch (err) {
             console.log('Error fetching summary:', err);
         } finally {
