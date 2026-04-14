@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import './Dashboard.css';
 import AddExpenseModal from '../components/AddExpenseModal';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import Card from '../components/Card';
-import { getExpenses, addExpense } from '../data/mockApi';
+import { getExpenses, addExpense, getSummary } from '../data/mockApi';
+import { CATEGORIES } from '../constants/categories';
 
 const Dashboard = () => {
     const { getToken } = useAuth();
@@ -14,17 +15,32 @@ const Dashboard = () => {
     // We use useState so React re-renders when the array changes.
     // ══════════════════════════════════════════════════════════
     const [expenses, setExpenses] = useState([]);
+    const [summary, setSummary] = useState({
+        total_spending: 0,
+        category_breakdown: [],
+        trajectory: [],
+        count: 0
+    });
+
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchExpenses = async () => {
+        const fetchData = async () => {
+            setIsLoading(true);
             try {
-                const data = await getExpenses();
-                setExpenses(data);
+                const [expenseData, summaryData] = await Promise.all([
+                    getExpenses(),
+                    getSummary()
+                ]);
+                setExpenses(expenseData);
+                setSummary(summaryData);
             } catch (error) {
-                console.error('Error fetching expenses:', error);
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
-        fetchExpenses();
+        fetchData();
     }, []);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +54,9 @@ const Dashboard = () => {
         try {
             const data = await addExpense(newExpense);
             setExpenses(prev => [data, ...prev]);
+            // Refresh summary after adding
+            const newSummary = await getSummary();
+            setSummary(newSummary);
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error adding expense:', error);
@@ -49,7 +68,7 @@ const Dashboard = () => {
     // This loops through every item in the expenses array and
     // adds up the 'amount' field to get the total spending.
     // ══════════════════════════════════════════════════════════
-    const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalSpending = summary.total_spending;
 
     // ══════════════════════════════════════════════════════════
     // ARRAY #2: Categories Array (Simple String Array)
@@ -66,41 +85,23 @@ const Dashboard = () => {
     const summaryStats = [
         { label: 'Monthly Budget', value: '₱2,000.00' },
         { label: 'Current Spending', value: `₱${totalSpending.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-        { label: 'Total Expenses', value: expenses.length },     // .length — counts items in the array
+        { label: 'Total Expenses', value: summary.count },
         { label: 'Over Budget', value: `₱${Math.max(0, totalSpending - 2000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
     ];
 
     // ── Trajectory Chart data & state ──
-    const trajectoryData = [
-        { day: 1, actual: 100, predicted: 110 },
-        { day: 2, actual: 210, predicted: 220 },
-        { day: 3, actual: 280, predicted: 310 },
-        { day: 4, actual: 400, predicted: 430 },
-        { day: 5, actual: 550, predicted: 580 },
-        { day: 6, actual: 750, predicted: 760 },
-        { day: 7, actual: 820, predicted: 890 },
-        { day: 8, actual: 1000, predicted: 1050 },
-        { day: 9, actual: 1250, predicted: 1200 },
-        { day: 10, actual: 1350, predicted: 1320 },
-        { day: 11, actual: 1480, predicted: 1420 },
-        { day: 12, actual: 1604.24, predicted: 1552.17 },
-        { day: 13, predicted: 1700 },
-        { day: 14, predicted: 1820 },
-        { day: 15, predicted: 1950 },
-        { day: 16, predicted: 2050 },
-        { day: 17, predicted: 2180 },
-        { day: 18, predicted: 2290 },
-        { day: 19, predicted: 2400 },
-        { day: 20, predicted: 2550 },
-        { day: 21, predicted: 2680 },
-        { day: 22, predicted: 2800 },
-        { day: 23, predicted: 2950 },
-        { day: 24, predicted: 3080 },
-        { day: 25, predicted: 3200 },
-        { day: 26, predicted: 3350 },
-        { day: 27, predicted: 3500 },
-        { day: 28, predicted: 3600 },
-    ];
+    const trajectoryData = useMemo(() => {
+        if (!summary.trajectory.length) return [];
+        const data = [...summary.trajectory];
+        const lastDay = data[data.length - 1];
+        for (let i = data.length + 1; i <= 30; i++) {
+            data.push({
+                day: i,
+                predicted: lastDay.actual + (lastDay.actual / lastDay.day) * (i - lastDay.day)
+            });
+        }
+        return data;
+    }, [summary.trajectory]);
 
     const [hoveredPoint, setHoveredPoint] = useState(null);
     const trajRef = useRef(null);
@@ -110,14 +111,10 @@ const Dashboard = () => {
     // Each element has a label and amount. We use .map() later
     // to render each bar in the horizontal bar chart.
     // ══════════════════════════════════════════════════════════
-    const categoryData = [
-        { label: 'Food & Dining', amount: 950 },
-        { label: 'Shopping', amount: 780 },
-        { label: 'Transport', amount: 320 },
-        { label: 'Health', amount: 310 },
-        { label: 'Education', amount: 220 },
-        { label: 'Entertainment', amount: 150 },
-    ];
+    const categoryData = summary.category_breakdown.map(item => ({
+        label: item.category,
+        amount: item.amount
+    }));
     const maxCategory = 1200;
     const [hoveredBar, setHoveredBar] = useState(null);
 
@@ -164,6 +161,15 @@ const Dashboard = () => {
     const barH = 20;
     const barGap = (cInnerH - categoryData.length * barH) / (categoryData.length + 1);
     const xTicks = [0, 300, 600, 900, 1200];
+
+    if (isLoading) {
+        return (
+            <div className="dashboard-container loading-container">
+                <div className="spinner"></div>
+                <p>Loading your financial summary...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="dashboard-container">
